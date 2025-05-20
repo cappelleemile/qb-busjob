@@ -1,6 +1,14 @@
 # qb-busjob
 Bus Job For QB-Core
 
+# Added / Changed Functions from the Original Script
+- You need to clock in and out at the marker,
+- You can take your bus at a marker,
+- Changed the busroute,
+- At the end of the route you need to return to the station,
+- Optimized the whole script,
+- 3D text above markers.
+
 # License
 
     QBCore Framework
