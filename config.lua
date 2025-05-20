@@ -1,18 +1,37 @@
 Config = Config or {}
 
 Config.AllowedVehicles = {
-    [1] = {model = `bus`, label = Lang:t('info.bus')},
+    [1] = {model = `bus`, label = "Bus"},
 }
 
-Config.Location = vector4(462.22, -641.15, 28.45, 175.0)
+-- https://docs.fivem.net/docs/game-references/markers/
+Config.OnDuty = {
+    coords = vector3(450.9926, -636.3857, 28.5157),
+    type = 2,
+    color = { r = 137, g = 52, b = 235 },
+    size = { x = 0.35, y = 0.15, z = 0.15 },
+}
+
+Config.Bus = {
+    coords = vector3(459.1600, -640.9186, 28.4482),
+    type = 2,
+    color = { r = 137, g = 52, b = 235 },
+    size = { x = 0.35, y = 0.15, z = 0.15 },
+}
+
+Config.Station = vector3(459.1600, -640.9186, 28.4482)
+Config.SpawnBus = vector4(459.1600, -640.9186, 28.4482, 213.7857)
 
 Config.NPCLocations = {
     Locations = {
         vector4(304.36, -764.56, 29.31, 252.09),
         vector4(-110.31, -1686.29, 29.31, 223.84),
+        vector4(364.5703, -1784.5726, 29.1111, 54.8142),
         vector4(-712.83, -824.56, 23.54, 194.7),
         vector4(-692.63, -670.44, 30.86, 61.84),
         vector4(-250.14, -886.78, 30.63, 8.67),
+        vector4(356.7831, -1066.6338, 29.5600, 357.0075),
+        vector4(788.2091, -1369.4900, 26.5166, 180.5854),
     }
 }
 

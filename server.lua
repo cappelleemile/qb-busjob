@@ -11,7 +11,7 @@ function NearBus(src)
     end
 end
 
-RegisterNetEvent('qb-busjob:server:NpcPay', function()
+RegisterNetEvent('nrp_busjob:server:NpcPay', function()
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     local Payment = math.random(15, 25)
@@ -22,9 +22,9 @@ RegisterNetEvent('qb-busjob:server:NpcPay', function()
             if randomAmount == r1 or randomAmount == r2 then Payment = Payment + math.random(10, 20) end
             Player.Functions.AddMoney('cash', Payment, 'Bus job')
         else
-            DropPlayer(src, Lang:t('error.exploit'))
+            DropPlayer(src, "Attempting To Exploit")
         end
     else
-        DropPlayer(src, Lang:t('error.exploit'))
+        DropPlayer(src, "Attempting To Exploit")
     end
 end)

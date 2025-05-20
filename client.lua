@@ -4,6 +4,9 @@ local PlayerData = QBCore.Functions.GetPlayerData()
 local route = 1
 local max = #Config.NPCLocations.Locations
 local busBlip = nil
+local onDuty = false
+
+local playerPed = PlayerPedId()
 
 local NpcData = {
     Active = false,
@@ -24,6 +27,20 @@ local BusData = {
 }
 
 -- Functions
+function DrawText3D(xyz, text)
+    SetTextScale(0.35, 0.35)
+    SetTextFont(4)
+    SetTextProportional(1)
+    SetTextColour(255, 255, 255, 215)
+    SetTextEntry("STRING")
+    SetTextCentre(true)
+    AddTextComponentString(text)
+    SetDrawOrigin(xyz, 0)
+    DrawText(0.0, 0.0)
+    DrawRect(0.0, 0.0115, 0.057, 0.028, 0, 0, 0, 75)
+    ClearDrawOrigin()
+end
+
 local function resetNpcTask()
     NpcData = {
         Active = false,
@@ -40,19 +57,15 @@ local function resetNpcTask()
 end
 
 local function updateBlip()
-    if PlayerData.job.name == "bus" then
-        busBlip = AddBlipForCoord(Config.Location)
-        SetBlipSprite(busBlip, 513)
-        SetBlipDisplay(busBlip, 4)
-        SetBlipScale(busBlip, 0.6)
-        SetBlipAsShortRange(busBlip, true)
-        SetBlipColour(busBlip, 49)
-        BeginTextCommandSetBlipName("STRING")
-        AddTextComponentSubstringPlayerName(Lang:t('info.bus_depot'))
-        EndTextCommandSetBlipName(busBlip)
-    elseif busBlip ~= nil then
-        RemoveBlip(busBlip)
-    end
+    busBlip = AddBlipForCoord(Config.Location)
+    SetBlipSprite(busBlip, 513)
+    SetBlipDisplay(busBlip, 4)
+    SetBlipScale(busBlip, 0.6)
+    SetBlipAsShortRange(busBlip, true)
+    SetBlipColour(busBlip, 49)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentSubstringPlayerName('Busstation')
+    EndTextCommandSetBlipName(busBlip)
 end
 
 local function whitelistedVehicle()
@@ -66,10 +79,6 @@ local function whitelistedVehicle()
         end
     end
 
-    if veh == `dynasty` then
-        retval = true
-    end
-
     return retval
 end
 
@@ -77,55 +86,74 @@ local function nextStop()
     if route <= (max - 1) then
         route = route + 1
     else
-        route = 1
+        route = nil
+        TriggerEvent('nrp_busjob:client:RouteCompleted')
     end
 end
 
 local function GetDeliveryLocation()
     nextStop()
+
     if NpcData.DeliveryBlip ~= nil then
         RemoveBlip(NpcData.DeliveryBlip)
     end
+
     NpcData.DeliveryBlip = AddBlipForCoord(Config.NPCLocations.Locations[route].x, Config.NPCLocations.Locations[route].y, Config.NPCLocations.Locations[route].z)
+
     SetBlipColour(NpcData.DeliveryBlip, 3)
     SetBlipRoute(NpcData.DeliveryBlip, true)
     SetBlipRouteColour(NpcData.DeliveryBlip, 3)
+
     NpcData.LastDeliver = route
+
     local inRange = false
+    local playerCoords = GetEntityCoords(playerPed)
     local PolyZone = CircleZone:Create(vector3(Config.NPCLocations.Locations[route].x,
         Config.NPCLocations.Locations[route].y, Config.NPCLocations.Locations[route].z), 5, {
         name = "busjobdeliver",
         useZ = true,
-        -- debugPoly=true
     })
+
     PolyZone:onPlayerInOut(function(isPointInside)
         if isPointInside then
             inRange = true
-            exports["qb-core"]:DrawText(Lang:t('info.busstop_text'), 'rgb(220, 20, 60)')
+
+            DrawText3D(vector3(playerCoords.x, playerCoords.y, playerCoords.z + 2.5), "~p~[E]~s~ Ophalen")
+
             CreateThread(function()
                 repeat
                     Wait(0)
+
                     if IsControlJustPressed(0, 38) then
                         local ped = PlayerPedId()
                         local veh = GetVehiclePedIsIn(ped, 0)
+
                         TaskLeaveVehicle(NpcData.Npc, veh, 0)
                         SetEntityAsMissionEntity(NpcData.Npc, false, true)
                         SetEntityAsNoLongerNeeded(NpcData.Npc)
+
                         local targetCoords = Config.NPCLocations.Locations[NpcData.LastNpc]
+
                         TaskGoStraightToCoord(NpcData.Npc, targetCoords.x, targetCoords.y, targetCoords.z, 1.0, -1, 0.0, 0.0)
-                        QBCore.Functions.Notify(Lang:t('success.dropped_off'), 'success')
+
+                        QBCore.Functions.Notify('Persoon is afgezet', 'success')
+
                         if NpcData.DeliveryBlip ~= nil then
                             RemoveBlip(NpcData.DeliveryBlip)
                         end
+
                         local RemovePed = function(pped)
                             SetTimeout(60000, function()
                                 DeletePed(pped)
                             end)
                         end
+
                         RemovePed(NpcData.Npc)
                         resetNpcTask()
                         nextStop()
-                        TriggerEvent('qb-busjob:client:DoBusNpc')
+
+                        TriggerEvent('nrp_busjob:client:DoBusNpc')
+
                         exports["qb-core"]:HideText()
                         PolyZone:destroy()
                         break
@@ -143,11 +171,10 @@ local function closeMenuFull()
     exports['qb-menu']:closeMenu()
 end
 
--- Old Menu Code (being removed)
 local function busGarage()
     local vehicleMenu = {
         {
-            header = Lang:t('menu.bus_header'),
+            header = 'Busvoertuigen',
             isMenuHeader = true
         }
     }
@@ -155,7 +182,7 @@ local function busGarage()
         vehicleMenu[#vehicleMenu + 1] = {
             header = v.label,
             params = {
-                event = "qb-busjob:client:TakeVehicle",
+                event = "nrp_busjob:client:TakeVehicle",
                 args = {
                     model = v.model
                 }
@@ -163,7 +190,7 @@ local function busGarage()
         }
     end
     vehicleMenu[#vehicleMenu + 1] = {
-        header = Lang:t('menu.bus_close'),
+        header = '⬅ Menu Sluiten',
         params = {
             event = "qb-menu:client:closeMenu"
         }
@@ -171,15 +198,15 @@ local function busGarage()
     exports['qb-menu']:openMenu(vehicleMenu)
 end
 
-RegisterNetEvent("qb-busjob:client:TakeVehicle", function(data)
-    local coords = Config.Location
+RegisterNetEvent("nrp_busjob:client:TakeVehicle", function(data)
+    local coords = Config.SpawnBus
     if (BusData.Active) then
-        QBCore.Functions.Notify(Lang:t('error.one_bus_active'), 'error')
+        QBCore.Functions.Notify('Je kunt maar één actieve bus tegelijk hebben', 'error')
         return
     else
         QBCore.Functions.TriggerCallback('QBCore:Server:SpawnVehicle', function(netId)
             local veh = NetToVeh(netId)
-            SetVehicleNumberPlateText(veh, Lang:t('info.bus_plate') .. tostring(math.random(1000, 9999)))
+            SetVehicleNumberPlateText(veh, 'BUS' .. tostring(math.random(1000, 9999)))
             exports['LegacyFuel']:SetFuel(veh, 100.0)
             closeMenuFull()
             TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
@@ -187,13 +214,12 @@ RegisterNetEvent("qb-busjob:client:TakeVehicle", function(data)
             SetVehicleEngineOn(veh, true, true)
         end, data.model, coords, true)
         Wait(1000)
-        TriggerEvent('qb-busjob:client:DoBusNpc')
+        TriggerEvent('nrp_busjob:client:DoBusNpc')
     end
 end)
 
 -- Events
 AddEventHandler('onResourceStart', function(resourceName)
-    -- handles script restarts
     if GetCurrentResourceName() == resourceName then
         updateBlip()
     end
@@ -214,7 +240,7 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
 
 end)
 
-RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
+RegisterNetEvent('nrp_busjob:client:DoBusNpc', function()
     if whitelistedVehicle() then
         if not NpcData.Active then
             local Gender = math.random(1, #Config.NpcSkins)
@@ -230,7 +256,7 @@ RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
             if NpcData.NpcBlip ~= nil then
                 RemoveBlip(NpcData.NpcBlip)
             end
-            QBCore.Functions.Notify(Lang:t('info.goto_busstop'), 'primary')
+            QBCore.Functions.Notify('Ga naar de opgegeven bushalte', 'primary')
             NpcData.NpcBlip = AddBlipForCoord(Config.NPCLocations.Locations[route].x, Config.NPCLocations.Locations[route].y, Config.NPCLocations.Locations[route].z)
             SetBlipColour(NpcData.NpcBlip, 3)
             SetBlipRoute(NpcData.NpcBlip, true)
@@ -238,6 +264,7 @@ RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
             NpcData.LastNpc = route
             NpcData.Active = true
             local inRange = false
+            local playerCoords = GetEntityCoords(playerPed)
             local PolyZone = CircleZone:Create(vector3(Config.NPCLocations.Locations[route].x,
                 Config.NPCLocations.Locations[route].y, Config.NPCLocations.Locations[route].z), 5, {
                 name = "busjobdeliver",
@@ -247,7 +274,7 @@ RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
             PolyZone:onPlayerInOut(function(isPointInside)
                 if isPointInside then
                     inRange = true
-                    exports["qb-core"]:DrawText(Lang:t('info.busstop_text'), 'rgb(220, 20, 60)')
+                    exports["qb-core"]:DrawText('[E] Bushalte', 'rgb(220, 20, 60)')
                     CreateThread(function()
                         repeat
                             Wait(5)
@@ -266,13 +293,13 @@ RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
                                 ClearPedTasksImmediately(NpcData.Npc)
                                 FreezeEntityPosition(NpcData.Npc, false)
                                 TaskEnterVehicle(NpcData.Npc, veh, -1, freeSeat, 1.0, 0)
-                                QBCore.Functions.Notify(Lang:t('info.goto_busstop'), 'primary')
+                                QBCore.Functions.Notify('Ga naar de opgegeven bushalte', 'primary')
                                 if NpcData.NpcBlip ~= nil then
                                     RemoveBlip(NpcData.NpcBlip)
                                 end
                                 GetDeliveryLocation()
                                 NpcData.NpcTaken = true
-                                TriggerServerEvent('qb-busjob:server:NpcPay')
+                                TriggerServerEvent('nrp_busjob:server:NpcPay')
                                 exports["qb-core"]:HideText()
                                 PolyZone:destroy()
                                 break
@@ -285,59 +312,143 @@ RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
                 end
             end)
         else
-            QBCore.Functions.Notify(Lang:t('error.already_driving_bus'), 'error')
+            QBCore.Functions.Notify('Je rijdt al in een bus', 'error')
         end
     else
-        QBCore.Functions.Notify(Lang:t('error.not_in_bus'), 'error')
+        QBCore.Functions.Notify('Je zit niet in een bus', 'error')
+    end
+end)
+
+RegisterNetEvent('nrp_busjob:client:RouteCompleted', function()
+    local playerCoords = GetEntityCoords(playerPed)
+    local vehicle = GetVehiclePedIsIn(playerPed, false)
+
+    if vehicle and whitelistedVehicle() then
+        local vehicleCoords = GetEntityCoords(vehicle)
+        local depotCoords = Config.Station
+
+        local blip = AddBlipForCoord(depotCoords.x, depotCoords.y, depotCoords.z)
+        SetBlipColour(blip, 2)
+        SetBlipRoute(blip, true)
+        SetBlipRouteColour(blip, 2)
+
+        QBCore.Functions.Notify("Ga terug naar het busstation.", 'info')
+
+        Citizen.CreateThread(function()
+            while true do
+                Wait(500)
+                local vehicleCoords = GetEntityCoords(vehicle)
+                if Vdist(vehicleCoords.x, vehicleCoords.y, vehicleCoords.z, depotCoords.x, depotCoords.y, depotCoords.z) < 10.0 then
+                    RemoveBlip(blip)
+                    DrawText3D(vector3(playerCoords.x, playerCoords.y, playerCoords.z + 2.5), "~p~[E]~s~ Stal bus")
+                        if IsControlJustReleased(0, 38) then
+                            if (not NpcData.Active or NpcData.Active and NpcData.NpcTaken == false) then
+                                if IsPedInAnyVehicle(PlayerPedId(), false) then
+                                    BusData.Active = false;
+                                    DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
+                                    RemoveBlip(NpcData.NpcBlip)
+                                    exports["qb-core"]:HideText()
+                                    resetNpcTask()
+                                    break
+                                end
+                            else
+                                QBCore.Functions.Notify('Zet de passagiers af voordat je stopt met werken', 'error')
+                            end
+                        end
+                    break
+                end
+            end
+        end)
+    else
+        QBCore.Functions.Notify('Je zit niet in een bus', 'error')
     end
 end)
 
 -- Threads
-CreateThread(function()
-    local inRange = false
-    local PolyZone = CircleZone:Create(vector3(Config.Location.x, Config.Location.y, Config.Location.z), 5, {
-        name = "busMain",
-        useZ = true,
-        debugPoly = false
-    })
-    PolyZone:onPlayerInOut(function(isPointInside)
-        local inVeh = whitelistedVehicle()
-        if PlayerData.job.name == "bus" then
-            if isPointInside then
-                inRange = true
-                CreateThread(function()
-                    repeat
-                        Wait(5)
-                        if not inVeh then
-                            exports["qb-core"]:DrawText(Lang:t('info.busstop_text'), 'left')
-                            if IsControlJustReleased(0, 38) then
-                                busGarage()
-                                exports["qb-core"]:HideText()
-                                break
-                            end
-                        else
-                            exports["qb-core"]:DrawText(Lang:t('info.bus_stop_work'), 'left')
-                            if IsControlJustReleased(0, 38) then
-                                if (not NpcData.Active or NpcData.Active and NpcData.NpcTaken == false) then
-                                    if IsPedInAnyVehicle(PlayerPedId(), false) then
-                                        BusData.Active = false;
-                                        DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
-                                        RemoveBlip(NpcData.NpcBlip)
-                                        exports["qb-core"]:HideText()
-                                        resetNpcTask()
-                                        break
-                                    end
-                                else
-                                    QBCore.Functions.Notify(Lang:t('error.drop_off_passengers'), 'error')
-                                end
-                            end
-                        end
-                    until not inRange
-                end)
-            else
-                exports["qb-core"]:HideText()
-                inRange = false
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        local type = Config.OnDuty.type
+        local pos = Config.OnDuty.coords
+        local color = Config.OnDuty.color
+        local size = Config.OnDuty.size
+
+        DrawMarker(
+            type,
+            pos.x, pos.y, pos.z,
+            0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0,
+            size.x, size.y, size.z,
+            color.r, color.g, color.b,
+            150,
+            false, true, 2, false, nil, nil, false
+        )
+
+        local playerCoords = GetEntityCoords(playerPed)
+        local distance = #(playerCoords - pos)
+
+        if distance <= 1.0 then
+            DrawText3D(vector3(pos.x, pos.y, pos.z + size.z + .05), "~p~[E]~s~ On Duty")
+
+            if IsControlJustReleased(0, 38) then
+                if onDuty then
+                    onDuty = false
+                    QBCore.Functions.Notify("Je bent uitgeklokt!", 'success')
+                else
+                    onDuty = true
+                    QBCore.Functions.Notify("Je bent ingeklokt!", 'success')
+                end
             end
         end
-    end)
+    end
+end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(0)
+
+        local type = Config.Bus.type
+        local pos = Config.Bus.coords
+        local color = Config.Bus.color
+        local size = Config.Bus.size
+
+        if onDuty then
+            DrawMarker(
+                type,
+                pos.x, pos.y, pos.z,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+                size.x, size.y, size.z,
+                color.r, color.g, color.b,
+                150,
+                false, true, 2, false, nil, nil, false
+            )
+
+            local playerCoords = GetEntityCoords(playerPed)
+            local distance = #(playerCoords - pos)
+            local inVeh = whitelistedVehicle()
+
+            if distance <= 1.0 then
+                if inVeh then
+                    DrawText3D(vector3(playerCoords.x, playerCoords.y, playerCoords.z + 2.5), "~p~[E]~s~ Stal bus")
+
+                    if IsControlJustReleased(0, 38) then
+                        BusData.Active = false;
+                        DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
+                        RemoveBlip(NpcData.NpcBlip)
+                        exports["qb-core"]:HideText()
+                        resetNpcTask()
+                        break
+                    end
+                else
+                    DrawText3D(vector3(pos.x, pos.y, pos.z + size.z + .05), "~p~[E]~s~ Neem bus")
+
+                    if IsControlJustReleased(0, 38) then
+                        busGarage()
+                    end
+                end
+            end
+        end
+    end
 end)

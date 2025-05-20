@@ -5,12 +5,7 @@ author 'Kakarot'
 description 'Allows players to work as a bus driver and pickup npcs around the map'
 version '1.2.0'
 
-shared_scripts {
-    '@qb-core/shared/locale.lua',
-    'locales/en.lua',
-    'locales/*.lua',
-    'config.lua'
-}
+shared_script 'config.lua'
 
 client_scripts {
     '@PolyZone/client.lua',
@@ -18,7 +13,7 @@ client_scripts {
     '@PolyZone/EntityZone.lua',
     '@PolyZone/CircleZone.lua',
     '@PolyZone/ComboZone.lua',
-    'client/main.lua'
+    'client.lua'
 }
 
-server_script 'server/main.lua'
+server_script 'server.lua'
