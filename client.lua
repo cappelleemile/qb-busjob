@@ -387,9 +387,12 @@ Citizen.CreateThread(function()
 
         local playerCoords = GetEntityCoords(playerPed)
         local distance = #(playerCoords - pos)
+        local text = "~p~[E]~s~ On Duty"
 
         if distance <= 1.0 then
-            DrawText3D(vector3(pos.x, pos.y, pos.z + size.z + .05), "~p~[E]~s~ On Duty")
+            if onDuty then text = "~p~[E]~s~ Off Duty" end
+
+            DrawText3D(vector3(pos.x, pos.y, pos.z + size.z + .05), text)
 
             if IsControlJustReleased(0, 38) then
                 if onDuty then
