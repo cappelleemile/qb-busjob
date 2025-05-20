@@ -87,7 +87,7 @@ local function nextStop()
         route = route + 1
     else
         route = nil
-        TriggerEvent('nrp_busjob:client:RouteCompleted')
+        TriggerEvent('qb-busjob:client:RouteCompleted')
     end
 end
 
@@ -152,7 +152,7 @@ local function GetDeliveryLocation()
                         resetNpcTask()
                         nextStop()
 
-                        TriggerEvent('nrp_busjob:client:DoBusNpc')
+                        TriggerEvent('qb-busjob:client:DoBusNpc')
 
                         exports["qb-core"]:HideText()
                         PolyZone:destroy()
@@ -182,7 +182,7 @@ local function busGarage()
         vehicleMenu[#vehicleMenu + 1] = {
             header = v.label,
             params = {
-                event = "nrp_busjob:client:TakeVehicle",
+                event = "qb-busjob:client:TakeVehicle",
                 args = {
                     model = v.model
                 }
@@ -198,7 +198,7 @@ local function busGarage()
     exports['qb-menu']:openMenu(vehicleMenu)
 end
 
-RegisterNetEvent("nrp_busjob:client:TakeVehicle", function(data)
+RegisterNetEvent("qb-busjob:client:TakeVehicle", function(data)
     local coords = Config.SpawnBus
     if (BusData.Active) then
         QBCore.Functions.Notify('Je kunt maar één actieve bus tegelijk hebben', 'error')
@@ -214,7 +214,7 @@ RegisterNetEvent("nrp_busjob:client:TakeVehicle", function(data)
             SetVehicleEngineOn(veh, true, true)
         end, data.model, coords, true)
         Wait(1000)
-        TriggerEvent('nrp_busjob:client:DoBusNpc')
+        TriggerEvent('qb-busjob:client:DoBusNpc')
     end
 end)
 
@@ -240,7 +240,7 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
 
 end)
 
-RegisterNetEvent('nrp_busjob:client:DoBusNpc', function()
+RegisterNetEvent('qb-busjob:client:DoBusNpc', function()
     if whitelistedVehicle() then
         if not NpcData.Active then
             local Gender = math.random(1, #Config.NpcSkins)
@@ -299,7 +299,7 @@ RegisterNetEvent('nrp_busjob:client:DoBusNpc', function()
                                 end
                                 GetDeliveryLocation()
                                 NpcData.NpcTaken = true
-                                TriggerServerEvent('nrp_busjob:server:NpcPay')
+                                TriggerServerEvent('qb-busjob:server:NpcPay')
                                 exports["qb-core"]:HideText()
                                 PolyZone:destroy()
                                 break
@@ -319,7 +319,7 @@ RegisterNetEvent('nrp_busjob:client:DoBusNpc', function()
     end
 end)
 
-RegisterNetEvent('nrp_busjob:client:RouteCompleted', function()
+RegisterNetEvent('qb-busjob:client:RouteCompleted', function()
     local playerCoords = GetEntityCoords(playerPed)
     local vehicle = GetVehiclePedIsIn(playerPed, false)
 

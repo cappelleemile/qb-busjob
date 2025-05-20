@@ -11,7 +11,7 @@ function NearBus(src)
     end
 end
 
-RegisterNetEvent('nrp_busjob:server:NpcPay', function()
+RegisterNetEvent('qb-busjob:server:NpcPay', function()
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     local Payment = math.random(15, 25)
