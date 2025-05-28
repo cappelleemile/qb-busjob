@@ -57,7 +57,7 @@ local function resetNpcTask()
 end
 
 local function updateBlip()
-    busBlip = AddBlipForCoord(Config.Location)
+    busBlip = AddBlipForCoord(Config.Station)
     SetBlipSprite(busBlip, 513)
     SetBlipDisplay(busBlip, 4)
     SetBlipScale(busBlip, 0.6)
